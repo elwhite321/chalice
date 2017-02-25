@@ -32,7 +32,7 @@ class Config(object):
     @property
     def lambda_arn(self):
         # type: () -> str
-        return self._chain_lookup('lambda_arn')
+        return self._chain_lookup('lambda_arn') + '-' + self.stage
 
     @property
     def profile(self):
