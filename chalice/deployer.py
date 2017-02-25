@@ -591,7 +591,7 @@ class LambdaDeployer(object):
 
     def deploy(self, config):
         # type: (Config) -> None
-        app_name = config.app_name
+        app_name = config.app_name + '-' + config.stage
         if self._aws_client.lambda_function_exists(app_name):
             self._get_or_create_lambda_role_arn(config)
             self._update_lambda_function(config)
@@ -610,7 +610,7 @@ class LambdaDeployer(object):
             # an iam_role_arn.
             return config.iam_role_arn
 
-        app_name = config.app_name
+        app_name = config.app_name + '-' + config.stage
         try:
             role_arn = self._aws_client.get_role_arn_for_name(app_name)
             self._update_role_with_latest_policy(app_name, config)
@@ -651,7 +651,7 @@ class LambdaDeployer(object):
         # function arn.
         # First we need to create a deployment package.
         print "Initial creation of lambda function."
-        app_name = config.app_name
+        app_name = config.app_name + '-' + config.stage
         role_arn = self._get_or_create_lambda_role_arn(config)
         zip_filename = self._packager.create_deployment_package(
             config.project_dir)
@@ -676,7 +676,8 @@ class LambdaDeployer(object):
         zip_contents = self._osutils.get_file_contents(
             deployment_package_filename, binary=True)
         print "Sending changes to lambda."
-        self._aws_client.update_function_code(config.app_name,
+        func_name = config.app_name + '-' + config.stage
+        self._aws_client.update_function_code(func_name,
                                               zip_contents)
 
     def _write_config_to_disk(self, config):
@@ -688,7 +689,7 @@ class LambdaDeployer(object):
 
     def _create_role_from_source_code(self, config):
         # type: (Config) -> str
-        app_name = config.app_name
+        app_name = config.app_name + '-' + config.stage
         app_policy = self._app_policy.generate_policy_from_app_source(config)
         if len(app_policy['Statement']) > 1:
             print "The following execution policy will be used:"
@@ -785,7 +786,7 @@ class APIGatewayDeployer(object):
         route_builder.build_resources(url_trie)
         # And finally, you need an actual deployment to deploy the changes to
         # API gateway.
-        stage = config.stage or 'dev'
+        stage = config.stage
         print "Deploying to:", stage
         self._aws_client.deploy_rest_api(rest_api_id, stage)
         return rest_api_id, self._aws_client.region_name, stage
