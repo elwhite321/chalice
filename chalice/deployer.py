@@ -591,11 +591,13 @@ class LambdaDeployer(object):
 
     def deploy(self, config):
         # type: (Config) -> None
-        app_name = config.app_name + '-' + config.stage
-        if self._aws_client.lambda_function_exists(app_name):
+        lambda_name = config.lambda_name
+        if self._aws_client.lambda_function_exists(lambda_name):
+            print "Updating Lambda function..."
             self._get_or_create_lambda_role_arn(config)
             self._update_lambda_function(config)
         else:
+            print "Creating new lambda function..."
             function_arn = self._first_time_lambda_create(config)
             # Record the lambda_arn for later use.
             config.config_from_disk['lambda_arn'] = function_arn
@@ -610,10 +612,10 @@ class LambdaDeployer(object):
             # an iam_role_arn.
             return config.iam_role_arn
 
-        app_name = config.app_name + '-' + config.stage
+        lambda_name = config.lambda_name
         try:
-            role_arn = self._aws_client.get_role_arn_for_name(app_name)
-            self._update_role_with_latest_policy(app_name, config)
+            role_arn = self._aws_client.get_role_arn_for_name(lambda_name)
+            self._update_role_with_latest_policy(lambda_name, config)
         except ValueError:
             print "Creating role"
             role_arn = self._create_role_from_source_code(config)
@@ -651,14 +653,14 @@ class LambdaDeployer(object):
         # function arn.
         # First we need to create a deployment package.
         print "Initial creation of lambda function."
-        app_name = config.app_name + '-' + config.stage
+        lambda_name = config.lambda_name
         role_arn = self._get_or_create_lambda_role_arn(config)
         zip_filename = self._packager.create_deployment_package(
             config.project_dir)
         with open(zip_filename, 'rb') as f:
             zip_contents = f.read()
         return self._aws_client.create_function(
-            app_name, role_arn, zip_contents)
+            lambda_name, role_arn, zip_contents)
 
     def _update_lambda_function(self, config):
         # type: (Config) -> None
@@ -668,15 +670,17 @@ class LambdaDeployer(object):
         deployment_package_filename = packager.deployment_package_filename(
             project_dir)
         if self._osutils.file_exists(deployment_package_filename):
+            print "Updating deployment package..."
             packager.inject_latest_app(deployment_package_filename,
                                        project_dir)
         else:
+            print "Creating new deployment package..."
             deployment_package_filename = packager.create_deployment_package(
                 project_dir)
         zip_contents = self._osutils.get_file_contents(
             deployment_package_filename, binary=True)
-        print "Sending changes to lambda."
-        func_name = config.app_name + '-' + config.stage
+        print "Sending changes to lambda..."
+        func_name = config.lambda_name
         self._aws_client.update_function_code(func_name,
                                               zip_contents)
 
@@ -689,7 +693,7 @@ class LambdaDeployer(object):
 
     def _create_role_from_source_code(self, config):
         # type: (Config) -> str
-        app_name = config.app_name + '-' + config.stage
+        lambda_name = config.lambda_name
         app_policy = self._app_policy.generate_policy_from_app_source(config)
         if len(app_policy['Statement']) > 1:
             print "The following execution policy will be used:"
@@ -697,7 +701,7 @@ class LambdaDeployer(object):
             self._prompter.confirm("Would you like to continue? ",
                                    default=True, abort=True)
         role_arn = self._aws_client.create_role(
-            name=app_name,
+            name=lambda_name,
             trust_policy=LAMBDA_TRUST_POLICY,
             policy=app_policy
         )

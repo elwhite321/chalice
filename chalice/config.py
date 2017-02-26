@@ -1,5 +1,7 @@
 from typing import Dict, Any  # noqa
+from botocore.session import Session
 from chalice.app import Chalice  # noqa
+from chalice.awsclient import TypedAWSClient
 
 StrMap = Dict[str, Any]
 
@@ -23,6 +25,7 @@ class Config(object):
         if default_params is None:
             default_params = {}
         self._default_params = default_params
+        self._aws_client = TypedAWSClient(Session(profile=self.profile))
 
     @classmethod
     def create(cls, **kwargs):
@@ -32,7 +35,12 @@ class Config(object):
     @property
     def lambda_arn(self):
         # type: () -> str
-        return self._chain_lookup('lambda_arn') + '-' + self.stage
+        return self._aws_client.default_lambda_arn(self.lambda_name)
+
+    @property
+    def lambda_name(self):
+        # type: () -> str
+        return self.app_name + '-' + self.stage
 
     @property
     def profile(self):

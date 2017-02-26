@@ -103,7 +103,7 @@ def load_chalice_app(project_dir):
     return chalice_app
 
 
-def write_config_to_lib(config):
+def write_stage_to_lib(config):
     lib_path = 'chalicelib'
     config_path = os.path.join(lib_path, 'stage')
     if not os.path.exists(config_path):
@@ -123,7 +123,9 @@ def create_config_obj(ctx, stage_name=None, autogen_policy=None, profile=None):
     # type: (click.Context, str, bool, str) -> Config
     user_provided_params = {}  # type: Dict[str, Any]
     project_dir = ctx.obj['project_dir']
-    default_params = {'project_dir': project_dir}
+    default_params = {
+        'project_dir': project_dir
+    }
     try:
         config_from_disk = load_project_config(project_dir)
     except (OSError, IOError):
@@ -139,7 +141,7 @@ def create_config_obj(ctx, stage_name=None, autogen_policy=None, profile=None):
     if profile is not None:
         user_provided_params['profile'] = profile
     config = Config(user_provided_params, config_from_disk, default_params)
-    write_config_to_lib(config)
+    write_stage_to_lib(config)
     return config
 
 

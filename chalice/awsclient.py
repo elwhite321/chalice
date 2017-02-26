@@ -350,6 +350,10 @@ class TypedAWSClient(object):
         # type: () -> str
         return self._client('apigateway').meta.region_name
 
+    def default_lambda_arn(self, lambda_name):
+        account_id = self._client('sts').get_caller_identity()['Account']
+        return ':'.join(['arn:aws:lambda', self.region_name, account_id, 'function', lambda_name])
+
     def _client(self, service_name):
         # type: (str) -> Any
         if service_name not in self._client_cache:
